@@ -1,14 +1,14 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 
-import { AppComponent, LocalInputProviderComponent, PluginLauncherComponent, RemoteInputReceiver } from './app.component';
+import { AppComponent, BindingsProviderAnchor, LocalInputProviderComponent, PluginLauncherComponent } from './app.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     PluginLauncherComponent,
     LocalInputProviderComponent,
-    RemoteInputReceiver
+    BindingsProviderAnchor
   ],
   imports: [
     BrowserModule,

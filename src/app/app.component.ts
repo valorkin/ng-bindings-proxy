@@ -1,9 +1,11 @@
 import {
+  AfterContentInit,
   AfterViewInit,
   ChangeDetectorRef,
   Component,
-  ComponentFactoryResolver,
-  ContentChild,
+  ComponentFactoryResolver, ContentChild,
+  Directive,
+  ElementRef,
   EventEmitter,
   Injector,
   Input,
@@ -14,6 +16,7 @@ import {
   ViewContainerRef
 } from '@angular/core';
 
+import {} from '@angular/core/src/r3_symbols';
 
 // 0. this provides compile time check
 // 1. Add run time checks for namings
@@ -40,19 +43,13 @@ export class LocalInputProviderComponent implements OnChanges {
   }
 }
 
-/** This is component loaded via module federation
- * we don't know at compile time it's interface
- */
-@Component({
-  selector: 'remote-input-receiver',
-  template: `
-    <p>prop 1: {{input_prop_1}}</p>
-    <p><input type="text" (change)="out_prop_1.emit($event.target.value)"></p>
-  `
-})
-export class RemoteInputReceiver {
-  @Input() input_prop_1: string;
-  @Output() out_prop_1 = new EventEmitter<string>();
+@Directive({selector: '[localBindingsAnchor]'})
+export class BindingsProviderAnchor {
+  component: any;
+
+  constructor(private el: ElementRef) {
+    this.component = (window as any).ng.getComponent(el.nativeElement);
+  }
 }
 
 /**
@@ -64,15 +61,16 @@ export class RemoteInputReceiver {
   template: `
     <p>test-plugin-launcher</p>
     <ng-container #view></ng-container>
-    <ng-content></ng-content>
   `,
   // changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PluginLauncherComponent implements AfterViewInit {
+export class PluginLauncherComponent implements AfterContentInit {
   @ViewChild('view', {read: ViewContainerRef, static: true})
   ngContentView: ViewContainerRef;
 
-  @ContentChild(LocalInputProviderComponent) local: any;
+  @ContentChild(BindingsProviderAnchor) bindingAnchor: any;
+
+  local: any;
   remote: any;
 
   constructor(
@@ -81,20 +79,24 @@ export class PluginLauncherComponent implements AfterViewInit {
     private readonly _injector: Injector) {
   }
 
-
   /**
    * Inject remote component and link local bindings to remote component
    */
-  ngAfterViewInit(): void {
-    this.injectRemoteComponent();
+  ngAfterContentInit(): void {
+    this.render();
+  }
+
+  async render(): Promise<void> {
+    await this.injectRemoteComponent();
     // because nokia is connecting people :D
     this.nokia();
     // this._cd.detectChanges();
   }
 
-  injectRemoteComponent(): void {
+  async injectRemoteComponent(): Promise<void> {
     // todo: lazy load component
-    const _component = RemoteInputReceiver;
+    const module = await import('./remote/remote.module');
+    const _component = module.RemoteInputReceiver;
     // if (_module.type === 'angular-ivy-component' && this.ngContentView) {
     this.ngContentView.clear();
     const factory = this.cfr.resolveComponentFactory(_component);
@@ -107,6 +109,7 @@ export class PluginLauncherComponent implements AfterViewInit {
 
   /** Link local bindings to remote component */
   nokia(): void {
+    this.local = this.bindingAnchor.component;
     const inputs = this.local.constructor.ɵcmp.inputs;
     const remoteInputs = this.remote.constructor.ɵcmp.inputs;
 
@@ -162,7 +165,8 @@ export class PluginLauncherComponent implements AfterViewInit {
     </p>
     <p>
       <test-plugin-launcher>
-        <local-input-provider #test [input_prop_1]="t1" (out_prop_1)="updateT2($event)"></local-input-provider>
+        <local-input-provider localBindingsAnchor
+                              [input_prop_1]="t1" (out_prop_1)="updateT2($event)"></local-input-provider>
       </test-plugin-launcher>
     </p>
   `

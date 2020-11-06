@@ -1,30 +1,35 @@
+import { NgComponentOutlet } from '@angular/common';
 import {
-  AfterContentInit,
-  AfterViewInit,
+  AfterViewChecked,
+  ChangeDetectionStrategy,
   ChangeDetectorRef,
+  Compiler,
   Component,
-  ComponentFactoryResolver, ContentChild,
+  ComponentFactoryResolver,
+  ContentChild,
   Directive,
   ElementRef,
   EventEmitter,
   Injector,
   Input,
+  NgModuleFactory,
   OnChanges,
+  OnInit,
   Output,
   SimpleChanges,
-  ViewChild,
-  ViewContainerRef
+  Type,
+  ViewChild
 } from '@angular/core';
 
-import {} from '@angular/core/src/r3_symbols';
-
+// DONE:
 // 0. this provides compile time check
 // 1. Add run time checks for namings
-// 2. TBD: how to check input types in runtime?
-// done - 3. Set initial values
+// 3. Set initial values
 // 4. extend ngOnChanges, not override
-// 5. FIX: OnChange {PluginLaunhcer, RemoteComponent, LocalInput?}
+// 5. OnChange {PluginLauncher, RemoteComponent, LocalInput?}
 // 6. Try NgComponentOutlet because it has ngOnChanges
+// TODO:
+// 2. TBD: how to check input types in runtime?
 
 /** This is component is written by Application developers
  * in order to have inputs\outputs
@@ -60,55 +65,54 @@ export class BindingsProviderAnchor {
   selector: 'test-plugin-launcher',
   template: `
     <p>test-plugin-launcher</p>
-    <ng-container #view></ng-container>
+    <ng-container *ngComponentOutlet="component; ngModuleFactory: module"></ng-container>
   `,
-  // changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class PluginLauncherComponent implements AfterContentInit {
-  @ViewChild('view', {read: ViewContainerRef, static: true})
-  ngContentView: ViewContainerRef;
+export class PluginLauncherComponent implements OnInit, AfterViewChecked {
+  @ViewChild(NgComponentOutlet) ngContentView: NgComponentOutlet;
 
   @ContentChild(BindingsProviderAnchor) bindingAnchor: any;
 
   local: any;
   remote: any;
 
+  component: Type<any>;
+  module: NgModuleFactory<any>;
+
+  private isInitialized = false;
+
   constructor(
     private readonly _cd: ChangeDetectorRef,
     private readonly cfr: ComponentFactoryResolver,
-    private readonly _injector: Injector) {
+    private readonly _injector: Injector,
+    private readonly compiler: Compiler) {
   }
 
   /**
    * Inject remote component and link local bindings to remote component
    */
-  ngAfterContentInit(): void {
-    this.render();
+  ngOnInit(): void {
+    this.injectRemoteComponent();
   }
 
-  async render(): Promise<void> {
-    await this.injectRemoteComponent();
-    // because nokia is connecting people :D
-    this.nokia();
-    // this._cd.detectChanges();
+  ngAfterViewChecked(): void {
+    if (!this.isInitialized && (this.ngContentView as any)?._componentRef) {
+      this.isInitialized = true;
+      this.nokia();
+    }
   }
 
   async injectRemoteComponent(): Promise<void> {
-    // todo: lazy load component
     const module = await import('./remote/remote.module');
-    const _component = module.RemoteInputReceiver;
-    // if (_module.type === 'angular-ivy-component' && this.ngContentView) {
-    this.ngContentView.clear();
-    const factory = this.cfr.resolveComponentFactory(_component);
-    const ref = this.ngContentView.createComponent(factory, null, this._injector);
+    this.module = await this.compiler.compileModuleAsync(module.RemoteModule);
+    this.component = module.RemoteInputReceiver;
     this._cd.detectChanges();
-    // }
-
-    this.remote = ref.instance;
   }
 
   /** Link local bindings to remote component */
   nokia(): void {
+    this.remote = (this.ngContentView as any)._componentRef.instance;
     this.local = this.bindingAnchor.component;
     const inputs = this.local.constructor.ɵcmp.inputs;
     const remoteInputs = this.remote.constructor.ɵcmp.inputs;
@@ -127,6 +131,7 @@ export class PluginLauncherComponent implements AfterContentInit {
         for (const key of inputArr) {
           this.remote[key] = this.local[key];
         }
+        this._cd.detectChanges();
       });
 
       const originalOnChanges = this.local.ngOnChanges.bind(this.local);
@@ -136,6 +141,7 @@ export class PluginLauncherComponent implements AfterContentInit {
           for (const key of Object.keys(value)) {
             this.remote[key] = value[key].currentValue;
           }
+          this._cd.detectChanges();
         }
       };
     }

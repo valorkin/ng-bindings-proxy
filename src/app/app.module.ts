@@ -1,20 +1,17 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 
-import { AppComponent, BindingsProviderAnchor, LocalInputProviderComponent, PluginLauncherComponent } from './app.component';
+import { AppComponent } from './app.component';
+import { SolidBindingsSampleModule } from './solid-bindings/solid-bindings-sample';
 
 @NgModule({
   declarations: [
-    AppComponent,
-    PluginLauncherComponent,
-    LocalInputProviderComponent,
-    BindingsProviderAnchor
+    AppComponent
   ],
   imports: [
     BrowserModule,
+    SolidBindingsSampleModule
   ],
-  schemas: [],
-  providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule {

@@ -1,5 +1,5 @@
 {
-  "name": "contentReqApp",
+  "name": "generatedMfPackage",
   "version": "1.0.1",
   "provider": "Ariba",
   "uri": "http://localhost:4201/remoteEntry.js",
@@ -8,11 +8,6 @@
       "name": "PrListComponent",
       "type": "angular-ivy-component",
       "exposedModule": "./PrList"
-    },
-    {
-      "name": "DownloadComponent",
-      "type": "angular-ivy-component",
-      "exposedModule": "./Download"
     }
   ]
 }

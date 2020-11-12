@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, NgModule } from '@angular/core';
+import { ContentItemAppModule } from '../generated-mf-package/content-item-app.module';
 
 @Component({
   template: `
@@ -16,4 +17,11 @@ export class SomePageComponent {
   onLoaded(): void {
     console.log('we are ready to display ');
   }
+}
+
+@NgModule({
+  declarations: [SomePageComponent],
+  imports: [ContentItemAppModule]
+})
+export class SomePageModule {
 }
